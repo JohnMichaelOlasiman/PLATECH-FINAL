@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LRU Page Replacement Algorithm</title>
+  <link rel="stylesheet" href="output.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="py-8">
+  <div class="container mx-auto px-4 max-w-6xl">
+    <!-- Header Section -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-gray-800">LRU Page Replacement Algorithm</h1>
+      <div class="flex items-center">
+        <div class="speed-control mr-4">
+          <span class="text-sm text-gray-600">Speed:</span>
+          <input type="range" min="1" max="5" value="3" class="slider" id="speed-slider">
+          <span id="speed-value" class="text-sm text-gray-600">Normal</span>
+        </div>
+        <button id="auto-btn" class="control-btn">
+          <i class="fas fa-play"></i> Auto Play
+        </button>
+      </div>
+    </div>
+
+    <!-- Input Configuration Section -->
+    <div class="flex flex-col space-y-4 mb-6">
+      <div class="flex items-center">
+        <label for="frame-count" class="w-48 font-medium text-gray-700">Number of Frames:</label>
+        <input type="number" id="frame-count" min="1" max="10" value="3" 
+              class="w-20 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="flex items-center">
+        <label for="page-sequence-input" class="w-48 font-medium text-gray-700">Page Reference Sequence:</label>
+        <input type="text" id="page-sequence-input" 
+              value=""
+              class="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter numbers separated by spaces">
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left/Center Panel (Visualization) -->
+      <div class="lg:col-span-2">
+        <!-- Visualization Card -->
+        <div class="card bg-white p-6 mb-6 relative">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Memory State Visualization</h2>
+          <div class="step-counter" id="step-counter">Step: 0 / 0</div>
+          
+          <!-- Page Reference String Section -->
+          <div class="mb-6">
+            <div class="flex items-center mb-2">
+              <h3 class="text-md font-medium text-gray-700">Page Reference String:</h3>
+              <div class="info-tooltip ml-2">
+                <i class="fas fa-info-circle text-gray-500"></i>
+                <span class="tooltip-text">The sequence of page numbers that are being requested by processes in the system.</span>
+              </div>
+            </div>
+            <div class="sequence-container">
+              <div class="page-sequence" id="page-sequence">
+                <!-- Page reference sequence will be displayed here -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- Memory Frames Section -->
+          <div class="mb-6 overflow-x-auto">
+            <div class="flex items-center mb-3">
+              <h3 class="text-md font-medium text-gray-700">Memory Frames:</h3>
+              <div class="info-tooltip ml-2">
+                <i class="fas fa-info-circle text-gray-500"></i>
+                <span class="tooltip-text">Memory frames represent the physical memory available for page allocation. When a page is referenced, it's loaded into a frame if not already present.</span>
+              </div>
+            </div>
+            <div id="frames-container" class="min-w-[600px]">
+              <!-- Frames will be displayed here -->
+            </div>
+          </div>
+          
+          <!-- Progress Indicator -->
+          <div class="progress-container">
+            <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+          </div>
+        </div>
+        
+        <!-- Controls Panel -->
+        <div class="card bg-white p-6">
+          <div class="flex justify-between items-center">
+            <!-- Navigation Controls -->
+            <div class="flex space-x-3">
+              <button id="prev-btn" class="control-btn">
+                <i class="fas fa-chevron-left"></i> Previous
+              </button>
+              <button id="next-btn" class="control-btn">
+                Next <i class="fas fa-chevron-right"></i>
+              </button>
+              <button id="reset-btn" class="control-btn secondary">
+                <i class="fas fa-redo"></i> Reset
+              </button>
+              <button id="reset-all-btn" class="control-btn secondary">
+                <i class="fas fa-trash"></i> Reset All
+              </button>
+            </div>
+            
+            <!-- Legend Section -->
+            <div class="flex flex-wrap">
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--info)"></div>
+                <span class="text-sm">Hit</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--success)"></div>
+                <span class="text-sm">New Page</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--warning)"></div>
+                <span class="text-sm">Replacement</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--danger)"></div>
+                <span class="text-sm">LRU</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Panel (Information) -->
+      <div class="lg:col-span-1">
+        <!-- Current Status Card -->
+        <div class="card bg-white p-6 mb-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Current Status</h2>
+          
+          <!-- Statistics Panel -->
+          <div class="stats-container mb-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-gray-600">Current Page:</span>
+              <span id="current-page" class="font-semibold text-gray-800">-</span>
+            </div>
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-gray-600">Number of Hits:</span>
+              <span id="page-hits" class="font-semibold text-gray-800">0</span>
+            </div>
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-gray-600">Page Faults:</span>
+              <span id="page-faults" class="font-semibold text-gray-800">0</span>
+            </div>
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-gray-600">Success Rate:</span>
+              <span id="hit-ratio" class="font-semibold text-gray-800">0%</span>
+            </div>
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-gray-600">Failure Rate:</span>
+              <span id="failure-rate" class="font-semibold text-gray-800">0%</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">LRU Order:</span>
+              <div id="lru-order" class="flex gap-2"></div>
+            </div>
+          </div>
+          
+          <!-- Status Message Panel -->
+          <div class="mb-4">
+            <h3 class="text-md font-medium text-gray-700 mb-2">Status:</h3>
+            <div id="status" class="p-3 bg-gray-50 rounded-md text-gray-700 min-h-[80px]">
+              Click "Next" to start the algorithm.
+            </div>
+          </div>
+          
+          <!-- Action History Log -->
+          <div>
+            <h3 class="text-md font-medium text-gray-700 mb-2">Action History:</h3>
+            <div id="action-history" class="p-3 bg-gray-50 rounded-md text-gray-700 h-64 overflow-y-auto text-sm space-y-2">
+              <!-- Action history will be displayed here -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Algorithm Explanation Card -->
+        <div class="card bg-white p-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-3">Algorithm Explanation</h2>
+          <div class="space-y-3 text-gray-700">
+            <p>The <span class="font-semibold">Least Recently Used (LRU)</span> algorithm replaces the page that has not been used for the longest period of time when a new page needs to be loaded and all frames are full.</p>
+            <div class="p-3 bg-blue-50 rounded-md">
+              <h3 class="font-medium text-blue-800 mb-1">How it works:</h3>
+              <ul class="list-disc pl-5 space-y-1 text-blue-900">
+                <li>When a page is referenced, it's checked if it's already in memory.</li>
+                <li>If the page is in memory, it's marked as "most recently used".</li>
+                <li>If not in memory and there's a free frame, the page is loaded there.</li>
+                <li>If all frames are full, the least recently used page is replaced.</li>
+                <li>The algorithm maintains an ordering of pages by recency of use.</li>
+              </ul>
+            </div>
+            <p class="text-gray-600 text-sm">The LRU algorithm performs well in practice but requires additional hardware support to efficiently track page usage.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // ==========================================
+      // CONFIGURATION AND STATE VARIABLES
+      // ==========================================
+      
+      // Configuration
+      let pageReferenceString = [];
+      let frameCount = 3;
+      
+      // Algorithm State
+      let currentStep = 0;
+      let frames = Array(frameCount).fill(null);
+      let lruOrder = [];
+      let pageFaults = 0;
+      let pageHits = 0;
+      let history = [];
+      
+      // UI State
+      let autoPlayInterval = null;
+      let animationSpeed = 3;
+      
+      // ==========================================
+      // DOM ELEMENT REFERENCES
+      // ==========================================
+      
+      // Control Buttons
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+      const resetBtn = document.getElementById('reset-btn');
+      const resetAllBtn = document.getElementById('reset-all-btn');
+      const autoBtn = document.getElementById('auto-btn');
+      
+      // Input Elements
+      const frameCountInput = document.getElementById('frame-count');
+      const pageSequenceInput = document.getElementById('page-sequence-input');
+      const speedSliderEl = document.getElementById('speed-slider');
+      const speedValueEl = document.getElementById('speed-value');
+      
+      // Visualization Elements
+      const pageSequenceEl = document.getElementById('page-sequence');
+      const framesContainerEl = document.getElementById('frames-container');
+      const progressBarEl = document.getElementById('progress-bar');
+      
+      // Status Elements
+      const statusEl = document.getElementById('status');
+      const pageFaultsEl = document.getElementById('page-faults');
+      const pageHitsEl = document.getElementById('page-hits');
+      const hitRatioEl = document.getElementById('hit-ratio');
+      const failureRateEl = document.getElementById('failure-rate');
+      const currentPageEl = document.getElementById('current-page');
+      const lruOrderEl = document.getElementById('lru-order');
+      const actionHistoryEl = document.getElementById('action-history');
+      const stepCounterEl = document.getElementById('step-counter');
+      
+      // ==========================================
+      // CORE FUNCTIONS
+      // ==========================================
+      
+      // Initialize the application state
+      function initialize() {
+        // Get the input value and parse it
+        const inputValue = pageSequenceInput.value.trim();
+        
+        // Use default sequence if input is empty
+        if (inputValue === '') {
+          pageReferenceString = [];
+        } else {
+          // Parse the input string into numbers
+          pageReferenceString = inputValue.split(/\s+/).map(Number);
+          
+          // Validate input
+          if (pageReferenceString.some(isNaN)) {
+            alert('Invalid input. Please enter numbers separated by spaces.');
+            return;
+          }
+        }
+        
+        frameCount = parseInt(frameCountInput.value);
+        
+        // Reset all state variables
+        currentStep = 0;
+        frames = Array(frameCount).fill(null);
+        lruOrder = [];
+        pageFaults = 0;
+        pageHits = 0;
+        history = [{
+          frames: [...frames],
+          lruOrder: [...lruOrder],
+          pageFaults,
+          pageHits,
+          referencedPage: null,
+          isPageFault: false,
+          replacedPage: null
+        }];
+        
+        stopAutoPlay();
+        renderPageSequence();
+        renderFrames();
+        updateStatusPanel();
+        updateButtons();
+        updateActionHistory("Algorithm initialized. Ready to start.");
+        updateStepCounter();
+        updateProgressBar();
+      }
+      
+      // Reset all function - clears page sequence input as well
+      function resetAll() {
+        stopAutoPlay();
+        pageSequenceInput.value = "";
+        initialize();
+        updateActionHistory("All data has been reset. Enter a new page sequence.");
+      }
+      
+      // Process the next step in the algorithm
+      function processNextStep() {
+        if (currentStep >= pageReferenceString.length) return;
+        
+        const page = pageReferenceString[currentStep];
+        if (isNaN(page)) {
+          alert('Invalid page reference sequence. Please enter numbers only.');
+          return;
+        }
+        
+        let isPageFault = !frames.includes(page);
+        let replacedPage = null;
+        
+        lruOrder = lruOrder.filter(p => p !== page);
+        lruOrder.unshift(page);
+        
+        if (isPageFault) {
+          pageFaults++;
+          
+          const emptyFrameIndex = frames.indexOf(null);
+          if (emptyFrameIndex !== -1) {
+            frames[emptyFrameIndex] = page;
+          } else {
+            const leastRecentlyUsed = lruOrder.pop();
+            const replacementIndex = frames.indexOf(leastRecentlyUsed);
+            replacedPage = frames[replacementIndex];
+            frames[replacementIndex] = page;
+            lruOrder.unshift(page);
+          }
+        } else {
+          pageHits++;
+        }
+        
+        currentStep++;
+        
+        history[currentStep] = {
+          frames: [...frames],
+          lruOrder: [...lruOrder],
+          pageFaults,
+          pageHits,
+          referencedPage: page,
+          isPageFault,
+          replacedPage
+        };
+        
+        renderPageSequence();
+        renderFrames();
+        updateStatusPanel();
+        updateActionHistory("");
+        updateButtons();
+        updateStepCounter();
+        updateProgressBar();
+      }
+      
+      // Go back to the previous step
+      function goToPreviousStep() {
+        if (currentStep <= 0) return;
+        
+        currentStep--;
+        
+        const prevState = history[currentStep];
+        frames = [...prevState.frames];
+        lruOrder = [...prevState.lruOrder];
+        pageFaults = prevState.pageFaults;
+        pageHits = prevState.pageHits;
+        
+        renderPageSequence();
+        renderFrames();
+        updateStatusPanel();
+        updateButtons();
+        updateStepCounter();
+        updateProgressBar();
+      }
+      
+      // ==========================================
+      // RENDERING FUNCTIONS
+      // ==========================================
+      
+      // Render the page reference sequence
+      function renderPageSequence() {
+        pageSequenceEl.innerHTML = '';
+        
+        pageReferenceString.forEach((page, index) => {
+          const div = document.createElement('div');
+          div.className = `page-cell ${index === currentStep - 1 ? 'active' : 'normal'}`;
+          div.textContent = page;
+          
+          if (index === currentStep - 1) {
+            const pointer = document.createElement('div');
+            pointer.className = 'reference-pointer';
+            pointer.innerHTML = '<i class="fas fa-caret-up"></i>';
+            div.appendChild(pointer);
+          }
+          
+          pageSequenceEl.appendChild(div);
+        });
+      }
+      
+      // Render all frames with their contents
+      function renderFrames() {
+        framesContainerEl.innerHTML = '';
+        
+        for (let i = 0; i < frameCount; i++) {
+          const frameRow = document.createElement('div');
+          frameRow.className = 'flex items-center mb-4';
+          
+          const frameLabel = document.createElement('div');
+          frameLabel.className = 'frame-label font-medium text-gray-700';
+          frameLabel.textContent = `Frame ${i}:`;
+          frameRow.appendChild(frameLabel);
+          
+          const frameContent = document.createElement('div');
+          frameContent.className = 'flex space-x-2';
+          
+          for (let j = 0; j < pageReferenceString.length; j++) {
+            const cell = document.createElement('div');
+            
+            if (j < currentStep) {
+              const currentHistory = history[j + 1];
+              const frameValue = currentHistory.frames[i];
+              
+              if (frameValue !== null) {
+                cell.textContent = frameValue;
+                
+                if (j === currentStep - 1) {
+                  if (currentHistory.replacedPage !== null && currentHistory.frames[i] === currentHistory.referencedPage) {
+                    cell.className = 'page-cell replaced';
+                  } else if (currentHistory.isPageFault && currentHistory.frames[i] === currentHistory.referencedPage) {
+                    cell.className = 'page-cell fault new-page';
+                  } else if (currentHistory.referencedPage === frameValue) {
+                    cell.className = 'page-cell hit';
+                  } else {
+                    cell.className = 'page-cell normal';
+                  }
+                } else {
+                  cell.className = 'page-cell normal';
+                }
+                
+                if (j === currentStep - 1 && 
+                    lruOrder.length === frameCount && 
+                    lruOrder[lruOrder.length - 1] === frameValue) {
+                  const indicator = document.createElement('div');
+                  indicator.className = 'lru-indicator';
+                  indicator.innerHTML = '<i class="fas fa-clock fa-xs"></i>';
+                  cell.appendChild(indicator);
+                }
+              } else {
+                cell.textContent = '-';
+                cell.className = 'page-cell empty';
+              }
+            } else {
+              cell.textContent = '-';
+              cell.className = 'page-cell empty';
+            }
+            
+            frameContent.appendChild(cell);
+          }
+          
+          frameRow.appendChild(frameContent);
+          framesContainerEl.appendChild(frameRow);
+        }
+      }
+      
+      // ==========================================
+      // UI UPDATE FUNCTIONS
+      // ==========================================
+      
+      // Update the status panel
+      function updateStatusPanel() {
+        if (currentStep === 0) {
+          statusEl.textContent = 'Click "Next" to start the algorithm.';
+          currentPageEl.textContent = '-';
+          lruOrderEl.innerHTML = '-';
+          pageHitsEl.textContent = '0';
+        } else {
+          const currentHistory = history[currentStep];
+          
+          currentPageEl.textContent = currentHistory.referencedPage;
+          pageHitsEl.textContent = currentHistory.pageHits;
+          
+          if (currentHistory.isPageFault) {
+            if (currentHistory.replacedPage !== null) {
+              statusEl.innerHTML = `
+                <div class="badge badge-red mb-2">Page Fault</div>
+                <p>Page ${currentHistory.referencedPage} is not in memory.</p>
+                <p>Replacing page ${currentHistory.replacedPage} (LRU) with page ${currentHistory.referencedPage}.</p>
+              `;
+            } else {
+              statusEl.innerHTML = `
+                <div class="badge badge-yellow mb-2">Page Fault</div>
+                <p>Page ${currentHistory.referencedPage} is not in memory.</p>
+                <p>Loading it into an empty frame.</p>
+              `;
+            }
+          } else {
+            statusEl.innerHTML = `
+              <div class="badge badge-green mb-2">Page Hit</div>
+              <p>Page ${currentHistory.referencedPage} is already in memory.</p>
+              <p>Updating it as the most recently used page.</p>
+            `;
+          }
+          
+          lruOrderEl.innerHTML = '';
+          if (currentHistory.lruOrder.length > 0) {
+            currentHistory.lruOrder.forEach((page, index) => {
+              const pageEl = document.createElement('span');
+              if (index === 0) {
+                pageEl.className = 'text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-md';
+                pageEl.title = 'Most Recently Used';
+              } else if (index === currentHistory.lruOrder.length - 1 && currentHistory.lruOrder.length === frameCount) {
+                pageEl.className = 'text-xs px-2 py-1 bg-red-100 text-red-800 rounded-md';
+                pageEl.title = 'Least Recently Used';
+              } else {
+                pageEl.className = 'text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded-md';
+              }
+              pageEl.textContent = page;
+              lruOrderEl.appendChild(pageEl);
+            });
+          } else {
+            lruOrderEl.textContent = '-';
+          }
+        }
+        
+        pageFaultsEl.textContent = pageFaults;
+        const totalReferences = currentStep;
+        const hitRatio = totalReferences > 0 ? Math.round(((totalReferences - pageFaults) / totalReferences) * 100) : 0;
+        const failureRate = totalReferences > 0 ? Math.round((pageFaults / totalReferences) * 100) : 0;
+        
+        hitRatioEl.textContent = `${hitRatio}%`;
+        failureRateEl.textContent = `${failureRate}%`;
+      }
+      
+      // Add an entry to the action history
+      function updateActionHistory(message) {
+        const entry = document.createElement('div');
+        
+        if (currentStep > 0) {
+          const currentHistory = history[currentStep];
+          
+          if (currentHistory.isPageFault) {
+            if (currentHistory.replacedPage !== null) {
+              entry.innerHTML = `
+                <span class="text-gray-500">[Step ${currentStep}]</span> 
+                <span class="badge badge-red">Page Fault</span> 
+                Page ${currentHistory.referencedPage} replaced page ${currentHistory.replacedPage} in memory.
+              `;
+            } else {
+              entry.innerHTML = `
+                <span class="text-gray-500">[Step ${currentStep}]</span> 
+                <span class="badge badge-yellow">Page Fault</span> 
+                Page ${currentHistory.referencedPage} loaded into empty frame.
+              `;
+            }
+          } else {
+            entry.innerHTML = `
+              <span class="text-gray-500">[Step ${currentStep}]</span> 
+              <span class="badge badge-green">Page Hit</span> 
+              Page ${currentHistory.referencedPage} already in memory.
+            `;
+          }
+        } else {
+          entry.innerHTML = `<span class="text-gray-500">[Init]</span> ${message}`;
+        }
+        
+        actionHistoryEl.insertBefore(entry, actionHistoryEl.firstChild);
+      }
+      
+      // Update the step counter
+      function updateStepCounter() {
+        stepCounterEl.textContent = `Step: ${currentStep} / ${pageReferenceString.length}`;
+      }
+      
+      // Update the progress bar
+      function updateProgressBar() {
+        const percentage = (currentStep / pageReferenceString.length) * 100;
+        progressBarEl.style.width = `${percentage}%`;
+      }
+      
+      // Update button states
+      function updateButtons() {
+        prevBtn.disabled = currentStep === 0;
+        nextBtn.disabled = currentStep >= pageReferenceString.length;
+        
+        if (currentStep >= pageReferenceString.length || autoPlayInterval) {
+          autoBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+        } else {
+          autoBtn.innerHTML = '<i class="fas fa-play"></i> Auto Play';
+        }
+      }
+      
+      // ==========================================
+      // AUTO PLAY FUNCTIONS
+      // ==========================================
+      
+      // Toggle auto play
+      function toggleAutoPlay() {
+        if (autoPlayInterval) {
+          stopAutoPlay();
+        } else {
+          startAutoPlay();
+        }
+      }
+      
+      // Start auto play
+      function startAutoPlay() {
+        if (currentStep >= pageReferenceString.length) {
+          initialize();
+        }
+        
+        const intervals = [2000, 1500, 1000, 700, 400];
+        const interval = intervals[animationSpeed - 1];
+        
+        autoPlayInterval = setInterval(() => {
+          processNextStep();
+          if (currentStep >= pageReferenceString.length) {
+            stopAutoPlay();
+          }
+        }, interval);
+        
+        autoBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+      }
+      
+      // Stop auto play
+      function stopAutoPlay() {
+        if (autoPlayInterval) {
+          clearInterval(autoPlayInterval);
+          autoPlayInterval = null;
+          autoBtn.innerHTML = '<i class="fas fa-play"></i> Auto Play';
+        }
+      }
+      
+      // Update speed value display
+      function updateSpeedDisplay() {
+        const speedLabels = ['Very Slow', 'Slow', 'Normal', 'Fast', 'Very Fast'];
+        speedValueEl.textContent = speedLabels[animationSpeed - 1];
+      }
+      
+      // ==========================================
+      // EVENT LISTENERS
+      // ==========================================
+      
+      // Navigation buttons
+      prevBtn.addEventListener('click', () => {
+        stopAutoPlay();
+        goToPreviousStep();
+      });
+      
+      nextBtn.addEventListener('click', () => {
+        stopAutoPlay();
+        processNextStep();
+      });
+      
+      resetBtn.addEventListener('click', initialize);
+      
+      resetAllBtn.addEventListener('click', resetAll);
+      
+      autoBtn.addEventListener('click', toggleAutoPlay);
+      
+      // Input controls
+      speedSliderEl.addEventListener('input', function() {
+        animationSpeed = parseInt(this.value);
+        updateSpeedDisplay();
+        
+        if (autoPlayInterval) {
+          stopAutoPlay();
+          startAutoPlay();
+        }
+      });
+      
+      frameCountInput.addEventListener('change', () => {
+        stopAutoPlay();
+        initialize();
+      });
+      
+      pageSequenceInput.addEventListener('input', function() {
+        // Only initialize if there's actual content
+        if (this.value.trim() !== '') {
+          stopAutoPlay();
+          initialize();
+        }
+      });
+      
+      // ==========================================
+      // INITIALIZATION
+      // ==========================================
+      
+      // Initialize the application
+      initialize();
+      updateSpeedDisplay();
+    });
+  </script>
+</body>
+</html>
