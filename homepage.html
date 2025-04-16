@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LRU Algorithm | Home</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<style>
+  /* Base Styles */
+:root {
+    --primary-color: #000;
+    --secondary-color: #fff;
+    --accent-color: #333;
+    --light-gray: #f5f5f5;
+    --medium-gray: #e0e0e0;
+    --dark-gray: #666;
+    --font-primary: 'Inter', sans-serif;
+    --transition-speed: 0.3s;
+    --hit-color: #4a90e2;
+    --new-color: #50c878;
+    --replace-color: #ff6b6b;
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-family: var(--font-primary);
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+    line-height: 1.6;
+    overflow-x: hidden;
+    position: relative;
+    /* Removed cursor: none; to keep default cursor visible */
+  }
+  
+  /* Custom Cursor */
+  .cursor {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    transition: width 0.3s, height 0.3s, border-color 0.3s;
+    mix-blend-mode: difference;
+  }
+  
+  .cursor-grow {
+    width: 50px;
+    height: 50px;
+    background-color: rgba(255, 255, 255, 0.1);
+    mix-blend-mode: difference;
+  }
+  
+  .noise {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  a {
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition-speed) ease;
+    /* Removed cursor: none; to keep default cursor visible */
+  }
+  
+  ul {
+    list-style: none;
+  }
+  
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  
+  .section-title {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    display: inline-block;
+  }
+  
+  .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 60px;
+    height: 4px;
+    background-color: var(--primary-color);
+  }
+  
+  /* Text Reveal Animation - Improved */
+  .reveal-text {
+    position: relative;
+    overflow: hidden;
+    display: block;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  
+  .reveal-text.revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  /* Layout */
+  header, main, footer {
+    width: 100%;
+    position: relative;
+    z-index: 2;
+  }
+  
+  section {
+    padding: 6rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  /* Navigation */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .logo::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 3s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+  }
+  
+  .nav-links a {
+    font-weight: 500;
+    position: relative;
+  }
+  
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    transition: width var(--transition-speed) ease;
+  }
+  
+  .nav-links a:hover::after,
+  .nav-links a.active::after {
+    width: 100%;
+  }
+  
+  /* Buttons */
+  .primary-button, .secondary-button {
+    display: inline-block;
+    padding: 0.8rem 1.8rem;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all var(--transition-speed) ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .primary-button {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    border: 2px solid var(--primary-color);
+  }
+  
+  .secondary-button {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+  }
+  
+  .primary-button:hover, .secondary-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .primary-button::before, .secondary-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: all 0.5s;
+  }
+  
+  .primary-button:hover::before, .secondary-button:hover::before {
+    left: 100%;
+    transition: 0.5s;
+  }
+  
+  .secondary-button:hover {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+  }
+  
+  /* Pulse Animation */
+  .pulse {
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    }
+  }
+  
+  /* Hero Section */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    min-height: calc(100vh - 80px);
+  }
+  
+  .hero-content {
+    max-width: 600px;
+  }
+  
+  .hero h1 {
+    font-size: 4rem;
+    margin-bottom: 0.5rem;
+    position: relative;
+  }
+  
+  .hero h2.subtitle {
+    font-size: 2rem;
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+    color: var(--dark-gray);
+  }
+  
+  .description {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    max-width: 500px;
+  }
+  
+  .cta-buttons {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  /* Glitch Effect */
+  .glitch {
+    position: relative;
+    animation: glitch-skew 1s infinite linear alternate-reverse;
+  }
+  
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    clip: rect(44px, 450px, 56px, 0);
+  }
+  
+  .glitch::before {
+    left: 2px;
+    text-shadow: -2px 0 #ff00c1;
+    animation: glitch-anim 5s infinite linear alternate-reverse;
+  }
+  
+  .glitch::after {
+    left: -2px;
+    text-shadow: -2px 0 #00fff9;
+    animation: glitch-anim2 1s infinite linear alternate-reverse;
+  }
+  
+  @keyframes glitch-anim {
+    0% {
+      clip: rect(31px, 9999px, 94px, 0);
+      transform: skew(0.85deg);
+    }
+    5% {
+      clip: rect(70px, 9999px, 71px, 0);
+      transform: skew(0.17deg);
+    }
+    10% {
+      clip: rect(75px, 9999px, 92px, 0);
+      transform: skew(0.4deg);
+    }
+    15% {
+      clip: rect(66px, 9999px, 91px, 0);
+      transform: skew(0.56deg);
+    }
+    20% {
+      clip: rect(23px, 9999px, 29px, 0);
+      transform: skew(0.09deg);
+    }
+    25% {
+      clip: rect(13px, 9999px, 46px, 0);
+      transform: skew(0.02deg);
+    }
+    30% {
+      clip: rect(89px, 9999px, 99px, 0);
+      transform: skew(0.05deg);
+    }
+    35% {
+      clip: rect(3px, 9999px, 11px, 0);
+      transform: skew(0.85deg);
+    }
+    40% {
+      clip: rect(19px, 9999px, 17px, 0);
+      transform: skew(0.4deg);
+    }
+    45% {
+      clip: rect(71px, 9999px, 87px, 0);
+      transform: skew(0.92deg);
+    }
+    50% {
+      clip: rect(15px, 9999px, 59px, 0);
+      transform: skew(0.38deg);
+    }
+    55% {
+      clip: rect(75px, 9999px, 63px, 0);
+      transform: skew(0.52deg);
+    }
+    60% {
+      clip: rect(31px, 9999px, 43px, 0);
+      transform: skew(0.67deg);
+    }
+    65% {
+      clip: rect(82px, 9999px, 83px, 0);
+      transform: skew(0.53deg);
+    }
+    70% {
+      clip: rect(89px, 9999px, 44px, 0);
+      transform: skew(0.07deg);
+    }
+    75% {
+      clip: rect(41px, 9999px, 74px, 0);
+      transform: skew(0.75deg);
+    }
+    80% {
+      clip: rect(33px, 9999px, 4px, 0);
+      transform: skew(0.07deg);
+    }
+    85% {
+      clip: rect(62px, 9999px, 67px, 0);
+      transform: skew(0.82deg);
+    }
+    90% {
+      clip: rect(36px, 9999px, 97px, 0);
+      transform: skew(0.01deg);
+    }
+    95% {
+      clip: rect(40px, 9999px, 16px, 0);
+      transform: skew(0.01deg);
+    }
+    100% {
+      clip: rect(64px, 9999px, 93px, 0);
+      transform: skew(0.01deg);
+    }
+  }
+  
+  @keyframes glitch-anim2 {
+    0% {
+      clip: rect(65px, 9999px, 119px, 0);
+      transform: skew(0.19deg);
+    }
+    5% {
+      clip: rect(110px, 9999px, 59px, 0);
+      transform: skew(0.55deg);
+    }
+    10% {
+      clip: rect(24px, 9999px, 53px, 0);
+      transform: skew(0.02deg);
+    }
+    15% {
+      clip: rect(107px, 9999px, 44px, 0);
+      transform: skew(0.07deg);
+    }
+    20% {
+      clip: rect(66px, 9999px, 76px, 0);
+      transform: skew(0.46deg);
+    }
+    25% {
+      clip: rect(39px, 9999px, 31px, 0);
+      transform: skew(0.94deg);
+    }
+    30% {
+      clip: rect(82px, 9999px, 31px, 0);
+      transform: skew(0.74deg);
+    }
+    35% {
+      clip: rect(81px, 9999px, 80px, 0);
+      transform: skew(0.78deg);
+    }
+    40% {
+      clip: rect(89px, 9999px, 56px, 0);
+      transform: skew(0.23deg);
+    }
+    45% {
+      clip: rect(37px, 9999px, 51px, 0);
+      transform: skew(0.56deg);
+    }
+    50% {
+      clip: rect(72px, 9999px, 22px, 0);
+      transform: skew(0.95deg);
+    }
+    55% {
+      clip: rect(96px, 9999px, 72px, 0);
+      transform: skew(0.09deg);
+    }
+    60% {
+      clip: rect(52px, 9999px, 46px, 0);
+      transform: skew(0.08deg);
+    }
+    65% {
+      clip: rect(29px, 9999px, 118px, 0);
+      transform: skew(0.05deg);
+    }
+    70% {
+      clip: rect(119px, 9999px, 42px, 0);
+      transform: skew(0.07deg);
+    }
+    75% {
+      clip: rect(111px, 9999px, 35px, 0);
+      transform: skew(0.62deg);
+    }
+    80% {
+      clip: rect(35px, 9999px, 115px, 0);
+      transform: skew(0.06deg);
+    }
+    85% {
+      clip: rect(111px, 9999px, 107px, 0);
+      transform: skew(0.95deg);
+    }
+    90% {
+      clip: rect(32px, 9999px, 49px, 0);
+      transform: skew(0.4deg);
+    }
+    95% {
+      clip: rect(72px, 9999px, 99px, 0);
+      transform: skew(0.56deg);
+    }
+    100% {
+      clip: rect(90px, 9999px, 120px, 0);
+      transform: skew(0.75deg);
+    }
+  }
+  
+  @keyframes glitch-skew {
+    0% {
+      transform: skew(-0.5deg);
+    }
+    10% {
+      transform: skew(0.5deg);
+    }
+    20% {
+      transform: skew(0.2deg);
+    }
+    30% {
+      transform: skew(0.5deg);
+    }
+    40% {
+      transform: skew(-0.2deg);
+    }
+    50% {
+      transform: skew(-0.5deg);
+    }
+    60% {
+      transform: skew(0.2deg);
+    }
+    70% {
+      transform: skew(0.5deg);
+    }
+    80% {
+      transform: skew(-0.2deg);
+    }
+    90% {
+      transform: skew(0.5deg);
+    }
+    100% {
+      transform: skew(-0.5deg);
+    }
+  }
+  
+  /* Memory Visualization - Timeline Style */
+  .hero-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .memory-visualization {
+    width: 100%;
+    max-width: 600px;
+    background-color: var(--light-gray);
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .timeline-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .timeline-label {
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+  
+  .reference-sequence-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .reference-sequence {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+  
+  .reference-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    border: 2px solid var(--primary-color);
+    background-color: var(--secondary-color);
+    position: relative;
+  }
+  
+  .reference-cell.active {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+  }
+  
+  .timeline-container {
+    display: flex;
+    margin-bottom: 1.5rem;
+  }
+  
+  .frame-labels {
+    display: flex;
+    flex-direction: column;
+    margin-right: 1rem;
+  }
+  
+  .frame-label {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    width: 80px; /* Added fixed width for frame labels */
+  }
+  
+  .timeline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+  
+  .timeline-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .timeline-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    border: 2px solid var(--primary-color);
+    background-color: var(--secondary-color);
+    position: relative;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  .timeline-cell.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+  
+  .timeline-cell.hit {
+    background-color: var(--hit-color);
+    color: white;
+  }
+  
+  .timeline-cell.new {
+    background-color: var(--new-color);
+    color: white;
+  }
+  
+  .timeline-cell.replace {
+    background-color: var(--replace-color);
+    color: white;
+  }
+  
+  .timeline-cell.empty {
+    background-color: transparent;
+    color: var(--dark-gray);
+  }
+  
+  .timeline-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .legend-color {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+  }
+  
+  .legend-color.hit {
+    background-color: var(--hit-color);
+  }
+  
+  .legend-color.new {
+    background-color: var(--new-color);
+  }
+  
+  .legend-color.replace {
+    background-color: var(--replace-color);
+  }
+  
+  /* Features Section */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+  }
+  
+  .feature-card {
+    background-color: var(--light-gray);
+    padding: 2rem;
+    border-radius: 8px;
+    transition: all var(--transition-speed) ease;
+    position: relative;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  }
+  
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.5s ease;
+    pointer-events: none;
+  }
+  
+  .feature-card:hover::before {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  
+  .feature-icon {
+    width: 50px;
+    height: 50px;
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .feature-card:hover .feature-icon {
+    transform: rotateY(360deg);
+  }
+  
+  .feature-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* About Section */
+  .about {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+  
+  .about-content p {
+    margin-bottom: 1.5rem;
+  }
+  
+  .about-text {
+    max-width: 600px;
+  }
+  
+  .about-content ul {
+    padding-left: 1.5rem;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .about-content li {
+    margin-bottom: 0.5rem;
+    position: relative;
+  }
+  
+  .about-content li::before {
+    content: '•';
+    position: absolute;
+    left: -1.5rem;
+    color: var(--primary-color);
+    font-weight: bold;
+  }
+  
+  .about-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+  }
+  
+  .lru-diagram {
+    background-color: var(--light-gray);
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    position: relative;
+    z-index: 1;
+  }
+  
+  .floating {
+    animation: floating 6s ease-in-out infinite;
+  }
+  
+  @keyframes floating {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-15px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+  
+  .diagram-title {
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  
+  .diagram-content {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  /* Examples Section */
+  .examples-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+  
+  .example-card {
+    background-color: var(--light-gray);
+    border-radius: 8px;
+    padding: 2rem;
+    transition: all var(--transition-speed) ease;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+  
+  .example-card:hover {
+    transform: translateY(-5px) rotateX(5deg);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+  }
+  
+  .example-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+  
+  .example-visual {
+    height: 200px;
+    margin-top: 1.5rem;
+    background-color: var(--secondary-color);
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Parallax Section */
+  .parallax-section {
+    position: relative;
+    overflow: hidden;
+    padding: 6rem 2rem;
+    text-align: center;
+    margin-top: 4rem;
+  }
+  
+  .parallax-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--light-gray);
+    transform: translateZ(-1px) scale(2);
+    z-index: -1;
+  }
+  
+  .cta-content {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  /* CTA Section */
+  .cta h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .cta p {
+    max-width: 600px;
+    margin: 0 auto 2rem;
+  }
+  
+  /* Footer */
+  footer {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    padding: 4rem 2rem;
+    margin-top: 4rem;
+  }
+  
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+  
+  .footer-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  
+  .footer-links {
+    display: flex;
+    gap: 2rem;
+  }
+  
+  .footer-links a:hover {
+    opacity: 0.8;
+  }
+  
+  .footer-names {
+    margin-top: 1rem;
+    text-align: center;
+    line-height: 1.8;
+  }
+  
+  .footer-names p {
+    margin: 0;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 992px) {
+    .hero, .about {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    
+    .hero-content {
+      order: 1;
+    }
+    
+    .hero-visual {
+      order: 2;
+    }
+    
+    .section-title {
+      font-size: 2rem;
+    }
+    
+    .hero h1 {
+      font-size: 3rem;
+    }
+    
+    .hero h2.subtitle {
+      font-size: 1.5rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    nav {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .nav-links {
+      width: 100%;
+      justify-content: space-between;
+    }
+    
+    section {
+      padding: 4rem 1.5rem;
+    }
+    
+    .feature-card, .example-card {
+      padding: 1.5rem;
+    }
+    
+    .cta {
+      padding: 3rem 1.5rem;
+    }
+    
+    .footer-links {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+    
+    .hero h2.subtitle {
+      font-size: 1.2rem;
+    }
+    
+    .cta-buttons {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .primary-button, .secondary-button {
+      width: 100%;
+      text-align: center;
+    }
+    
+    .section-title {
+      font-size: 1.8rem;
+    }
+    
+    .cursor {
+      display: none;
+    }
+  }
+  
+  /* 3D Tilt Effect */
+  [data-tilt] {
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+  }
+  
+  [data-tilt] .feature-icon,
+  [data-tilt] h3,
+  [data-tilt] p {
+    transform: translateZ(30px);
+  }
+</style>
+<body>
+  <div class="noise"></div>
+  <div class="cursor"></div>
+  <header>
+    <nav>
+      <div class="logo">LRU</div>
+      <ul class="nav-links">
+        <li><a href="#" class="active">Home</a></li>
+        <li><a href="index.html">Simulator</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#examples">Examples</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <h1 class="glitch" data-text="Least Recently Used">Least Recently Used</h1>
+        <h2 class="subtitle">Page Replacement Algorithm</h2>
+        <p class="description">An efficient memory management technique that replaces the page that hasn't been used for the longest period of time.</p>
+        <div class="cta-buttons">
+          <a href="index.html" class="primary-button">Try the Simulator</a>
+          <a href="#learn" class="secondary-button">Learn More</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="memory-visualization">
+          <div class="timeline-header">
+            <div class="timeline-label">Timeline Execution</div>
+            <div class="reference-sequence-label">Reference Sequence:</div>
+            <div class="reference-sequence" id="referenceSequence"></div>
+          </div>
+          <div class="timeline-container">
+            <div class="frame-labels">
+              <div class="frame-label">Frame 0</div>
+              <div class="frame-label">Frame 1</div>
+              <div class="frame-label">Frame 2</div>
+            </div>
+            <div class="timeline-content" id="timelineContent">
+              <!-- Timeline content will be generated by JavaScript -->
+            </div>
+          </div>
+          <div class="timeline-legend">
+            <div class="legend-item">
+              <div class="legend-color hit"></div>
+              <span>Page Hit</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color new"></div>
+              <span>New Page</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color replace"></div>
+              <span>Page Replacement</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="learn" class="features">
+      <h2 class="section-title reveal-text">How LRU Works</h2>
+      <div class="features-grid">
+        <div class="feature-card" data-tilt>
+          <div class="feature-icon">1</div>
+          <h3>Track Page Usage</h3>
+          <p>LRU keeps track of when each page in memory was last accessed.</p>
+        </div>
+        <div class="feature-card" data-tilt>
+          <div class="feature-icon">2</div>
+          <h3>Page Request</h3>
+          <p>When a page is requested, check if it's already in memory.</p>
+        </div>
+        <div class="feature-card" data-tilt>
+          <div class="feature-icon">3</div>
+          <h3>Page Hit</h3>
+          <p>If the page is in memory, mark it as most recently used.</p>
+        </div>
+        <div class="feature-card" data-tilt>
+          <div class="feature-icon">4</div>
+          <h3>Page Fault</h3>
+          <p>If the page is not in memory and frames are full, replace the least recently used page.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="about">
+      <div class="about-content">
+        <h2 class="section-title reveal-text">About LRU Algorithm</h2>
+        <div class="about-text">
+          <p class="reveal-text">The <strong>Least Recently Used (LRU)</strong> algorithm is a sophisticated page replacement policy used in operating systems to manage memory efficiently. It operates on the principle of <em>temporal locality</em>, which suggests that pages accessed recently are likely to be accessed again in the near future.</p>
+          
+          <p class="reveal-text">When a page fault occurs and all memory frames are occupied, LRU makes an intelligent decision by evicting the page that has gone the longest time without being referenced. This approach minimizes the number of page faults compared to simpler algorithms like FIFO (First-In-First-Out).</p>
+          
+          <h3 class="reveal-text">Technical Implementation:</h3>
+          <p class="reveal-text">LRU can be implemented using various data structures:</p>
+          <ul>
+            <li class="reveal-text"><strong>Counter-based:</strong> Each page entry is tagged with the time of last use. When replacement is needed, the page with the oldest timestamp is selected.</li>
+            <li class="reveal-text"><strong>Stack-based:</strong> Pages are organized in a stack, with the most recently used page at the top. Each time a page is accessed, it's moved to the top.</li>
+            <li class="reveal-text"><strong>Hash Map + Doubly Linked List:</strong> Provides O(1) lookup time with efficient updates to the recency order.</li>
+          </ul>
+          
+          <h3 class="reveal-text">Real-world Applications:</h3>
+          <p class="reveal-text">LRU is widely used in:</p>
+          <ul>
+            <li class="reveal-text"><strong>Virtual Memory Systems:</strong> Modern operating systems use variants of LRU for page replacement.</li>
+            <li class="reveal-text"><strong>Database Buffer Management:</strong> Database systems employ LRU to decide which data blocks to keep in memory.</li>
+            <li class="reveal-text"><strong>Web Caching:</strong> Content Delivery Networks (CDNs) and browsers use LRU to manage cached web resources.</li>
+            <li class="reveal-text"><strong>CPU Caches:</strong> Some processor cache replacement policies are based on LRU principles.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="about-visual">
+        <div class="lru-diagram floating">
+          <div class="diagram-title">LRU Replacement Process</div>
+          <div class="diagram-content" id="lruDiagram"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="examples" class="examples">
+      <h2 class="section-title reveal-text">Example Scenarios</h2>
+      <div class="examples-grid">
+        <div class="example-card" data-tilt>
+          <h3>Scenario 1: Web Browsing</h3>
+          <p>Browser caches recently visited pages using LRU to optimize memory usage and improve loading times.</p>
+          <div class="example-visual" id="example1"></div>
+        </div>
+        <div class="example-card" data-tilt>
+          <h3>Scenario 2: Database Management</h3>
+          <p>Database systems use LRU for buffer cache management to keep frequently accessed data in memory.</p>
+          <div class="example-visual" id="example2"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta parallax-section">
+      <div class="parallax-bg"></div>
+      <div class="cta-content">
+        <h2 class="reveal-text">Ready to see LRU in action?</h2>
+        <p class="reveal-text">Try the interactive simulator to visualize how the LRU algorithm works step by step.</p>
+        <a href="index.html" class="primary-button pulse">Launch Simulator</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-content">
+      <div class="footer-logo">LRU Algorithm</div>
+      <div class="footer-links">
+        <a href="#">Home</a>
+        <a href="index.html">Simulator</a>
+        <a href="#about">About</a>
+        <a href="#examples">Examples</a>
+      </div>
+      <div class="footer-names">
+        <p>OLASIMAN, John Michael</p>
+        <p>PACQUIAO, Ejhie</p>
+        <p>BINGHAY, Carl David</p>
+        <p>DEL MAR, Joseph</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+  // Custom cursor
+  const cursor = document.querySelector('.cursor');
+  
+  document.addEventListener('mousemove', (e) => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+  });
+  
+  document.addEventListener('mousedown', () => {
+    cursor.classList.add('cursor-grow');
+  });
+  
+  document.addEventListener('mouseup', () => {
+    cursor.classList.remove('cursor-grow');
+  });
+  
+  // Add cursor effects on interactive elements
+  const interactiveElements = document.querySelectorAll('a, button, .feature-card, .example-card');
+  
+  interactiveElements.forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.classList.add('cursor-grow');
+    });
+    
+    el.addEventListener('mouseleave', () => {
+      cursor.classList.remove('cursor-grow');
+    });
+  });
+  
+  // Text reveal animation
+  const revealElements = document.querySelectorAll('.reveal-text');
+  
+  const revealOnScroll = () => {
+    revealElements.forEach(element => {
+      const elementTop = element.getBoundingClientRect().top;
+      const windowHeight = window.innerHeight;
+      
+      if (elementTop < windowHeight * 0.85) {
+        element.classList.add('revealed');
+      }
+    });
+  };
+  
+  window.addEventListener('scroll', revealOnScroll);
+  window.addEventListener('load', revealOnScroll);
+  
+  // 3D Tilt effect
+  const tiltElements = document.querySelectorAll('[data-tilt]');
+  
+  tiltElements.forEach(element => {
+    element.addEventListener('mousemove', (e) => {
+      const rect = element.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const xPercent = x / rect.width - 0.5;
+      const yPercent = y / rect.height - 0.5;
+      
+      const rotateX = yPercent * 10;
+      const rotateY = xPercent * -10;
+      
+      element.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+    });
+    
+    element.addEventListener('mouseleave', () => {
+      element.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+    });
+  });
+  
+  // LRU Timeline Visualization
+  const timelineContent = document.getElementById('timelineContent');
+  const referenceSequence = document.getElementById('referenceSequence');
+  
+  // Sample page reference string
+  const pages = ['A', 'B', 'C', 'A', 'D', 'E', 'A', 'B', 'C', 'D'];
+  let frames = [null, null, null];
+  let lruOrder = [];
+  let timelineSteps = [];
+  
+  // Create reference sequence visualization
+  pages.forEach(page => {
+    const pageCell = document.createElement('div');
+    pageCell.className = 'reference-cell';
+    pageCell.textContent = page;
+    referenceSequence.appendChild(pageCell);
+  });
+  
+  // Initialize timeline rows
+  for (let i = 0; i < 3; i++) {
+    const row = document.createElement('div');
+    row.className = 'timeline-row';
+    timelineContent.appendChild(row);
+  }
+  
+  // Process all steps and store results
+  function processAllSteps() {
+    let currentFrames = [null, null, null];
+    let currentLruOrder = [];
+    
+    timelineSteps.push({
+      frames: [...currentFrames],
+      lruOrder: [...currentLruOrder],
+      referencedPage: null,
+      isPageFault: false,
+      replacedPage: null
+    });
+    
+    pages.forEach((page, step) => {
+      const pageIndex = currentFrames.indexOf(page);
+      let isPageFault = pageIndex === -1;
+      let replacedPage = null;
+      
+      // Update LRU order
+      currentLruOrder = currentLruOrder.filter(p => p !== page);
+      currentLruOrder.unshift(page);
+      
+      if (isPageFault) {
+        const emptyFrameIndex = currentFrames.indexOf(null);
+        
+        if (emptyFrameIndex !== -1) {
+          // Empty frame available
+          currentFrames[emptyFrameIndex] = page;
+        } else {
+          // Replace LRU page
+          const lruPage = currentLruOrder[currentLruOrder.length - 1];
+          const lruIndex = currentFrames.indexOf(lruPage);
+          replacedPage = currentFrames[lruIndex];
+          currentFrames[lruIndex] = page;
+          currentLruOrder = currentLruOrder.filter(p => p !== lruPage);
+          currentLruOrder.unshift(page);
+        }
+      }
+      
+      timelineSteps.push({
+        frames: [...currentFrames],
+        lruOrder: [...currentLruOrder],
+        referencedPage: page,
+        isPageFault,
+        replacedPage,
+        step
+      });
+    });
+  }
+  
+  // Render timeline visualization
+  function renderTimeline() {
+    processAllSteps();
+    
+    const rows = timelineContent.querySelectorAll('.timeline-row');
+    
+    // For each step
+    timelineSteps.forEach((step, stepIndex) => {
+      // For each frame
+      for (let frameIndex = 0; frameIndex < 3; frameIndex++) {
+        const cell = document.createElement('div');
+        
+        if (stepIndex === 0) {
+          cell.className = 'timeline-cell empty';
+          cell.textContent = '-';
+        } else {
+          const frameValue = step.frames[frameIndex];
+          
+          if (frameValue !== null) {
+            cell.textContent = frameValue;
+            
+            if (stepIndex > 0 && frameValue === step.referencedPage) {
+              if (step.isPageFault) {
+                if (step.replacedPage !== null) {
+                  cell.className = 'timeline-cell replace';
+                } else {
+                  cell.className = 'timeline-cell new';
+                }
+              } else {
+                cell.className = 'timeline-cell hit';
+              }
+            } else {
+              cell.className = 'timeline-cell';
+            }
+          } else {
+            cell.className = 'timeline-cell empty';
+            cell.textContent = '-';
+          }
+        }
+        
+        // Add animation delay based on step index
+        cell.style.transitionDelay = `${stepIndex * 0.1}s`;
+        
+        // Add to the appropriate row
+        rows[frameIndex].appendChild(cell);
+      }
+      
+      // Highlight current reference in sequence
+      if (stepIndex > 0) {
+        const referenceCells = referenceSequence.querySelectorAll('.reference-cell');
+        if (step.step !== undefined) {
+          referenceCells[step.step].classList.add('active');
+        }
+      }
+    });
+    
+    // Animate cells after a short delay
+    setTimeout(() => {
+      const cells = document.querySelectorAll('.timeline-cell');
+      cells.forEach(cell => {
+        cell.classList.add('visible');
+      });
+    }, 500);
+  }
+  
+  // LRU Diagram Animation
+  const lruDiagram = document.getElementById('lruDiagram');
+  
+  function createLRUDiagram() {
+    if (!lruDiagram) return;
+    
+    lruDiagram.innerHTML = `
+      <div class="lru-step">
+        <div class="lru-step-title">1. Initial State</div>
+        <div class="lru-frames">
+          <div class="lru-frame">A</div>
+          <div class="lru-frame">B</div>
+          <div class="lru-frame">C</div>
+        </div>
+        <div class="lru-arrow">↓</div>
+      </div>
+      <div class="lru-step">
+        <div class="lru-step-title">2. Reference D (Page Fault)</div>
+        <div class="lru-frames">
+          <div class="lru-frame">A</div>
+          <div class="lru-frame">B</div>
+          <div class="lru-frame lru-highlight">D</div>
+        </div>
+        <div class="lru-note">C is least recently used</div>
+        <div class="lru-arrow">↓</div>
+      </div>
+      <div class="lru-step">
+        <div class="lru-step-title">3. Reference A (Page Hit)</div>
+        <div class="lru-frames">
+          <div class="lru-frame lru-highlight">A</div>
+          <div class="lru-frame">B</div>
+          <div class="lru-frame">D</div>
+        </div>
+        <div class="lru-note">A moves to most recently used</div>
+      </div>
+    `;
+    
+    // Add styles for the diagram
+    const style = document.createElement('style');
+    style.textContent = `
+      .lru-step {
+        margin-bottom: 1.5rem;
+        text-align: center;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.8s forwards;
+      }
+      
+      .lru-step:nth-child(1) {
+        animation-delay: 0.2s;
+      }
+      
+      .lru-step:nth-child(2) {
+        animation-delay: 0.4s;
+      }
+      
+      .lru-step:nth-child(3) {
+        animation-delay: 0.6s;
+      }
+      
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .lru-step-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      .lru-frames {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin: 0.5rem 0;
+      }
+      .lru-frame {
+        width: 40px;
+        height: 40px;
+        border: 2px solid #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: 600;
+        position: relative;
+        overflow: hidden;
+      }
+      .lru-highlight {
+        background-color: #000;
+        color: #fff;
+      }
+      .lru-highlight::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+        animation: pulse-highlight 2s infinite;
+      }
+      @keyframes pulse-highlight {
+        0% {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(1.2);
+          opacity: 0;
+        }
+      }
+      .lru-arrow {
+        font-size: 1.5rem;
+        margin: 0.5rem 0;
+        animation: bounce 2s infinite;
+      }
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(-10px);
+        }
+        60% {
+          transform: translateY(-5px);
+        }
+      }
+      .lru-note {
+        font-size: 0.9rem;
+        font-style: italic;
+        margin: 0.5rem 0;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // Create example visualizations
+  function createExamples() {
+    const example1 = document.getElementById('example1');
+    const example2 = document.getElementById('example2');
+    
+    if (example1) {
+      example1.innerHTML = `
+        <div class="browser-tabs">
+          <div class="browser-tab active">Home</div>
+          <div class="browser-tab">Products</div>
+          <div class="browser-tab">About</div>
+        </div>
+        <div class="browser-cache">
+          <div class="cache-title">Browser Cache (LRU)</div>
+          <div class="cache-item most-recent">Home Page (Most Recent)</div>
+          <div class="cache-item">Products Page</div>
+          <div class="cache-item least-recent">About Page (Least Recent)</div>
+        </div>
+      `;
+    }
+    
+    if (example2) {
+      example2.innerHTML = `
+        <div class="db-cache">
+          <div class="db-title">Database Buffer Cache</div>
+          <div class="db-records">
+            <div class="db-record most-recent">Record #1021 (Most Recent)</div>
+            <div class="db-record">Record #3842</div>
+            <div class="db-record least-recent">Record #5673 (Least Recent)</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Add styles for examples
+    const style = document.createElement('style');
+    style.textContent = `
+      .browser-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .browser-tab {
+        padding: 0.5rem 1rem;
+        background-color: #e0e0e0;
+        border-radius: 4px 4px 0 0;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+      .browser-tab.active {
+        background-color: #000;
+        color: #fff;
+      }
+      .browser-tab:hover:not(.active) {
+        background-color: #ccc;
+      }
+      .browser-cache, .db-cache {
+        border: 1px solid #ccc;
+        padding: 1rem;
+        border-radius: 0 0 4px 4px;
+      }
+      .cache-title, .db-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-align: center;
+      }
+      .cache-item, .db-record {
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .most-recent {
+        background-color: #000;
+        color: #fff;
+      }
+      .least-recent {
+        border: 1px dashed #999;
+      }
+      .most-recent::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        animation: shine 2s infinite;
+      }
+      @keyframes shine {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Add interactivity to browser tabs
+    if (example1) {
+      const tabs = example1.querySelectorAll('.browser-tab');
+      const cacheItems = example1.querySelectorAll('.cache-item');
+      
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+          // Update active tab
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Update cache order (LRU behavior)
+          cacheItems.forEach(item => {
+            item.classList.remove('most-recent');
+            item.classList.remove('least-recent');
+          });
+          
+          cacheItems[index].classList.add('most-recent');
+          cacheItems[(index + 2) % 3].classList.add('least-recent');
+          
+          // Reorder cache items
+          const cacheContainer = example1.querySelector('.browser-cache');
+          cacheContainer.insertBefore(cacheItems[index], cacheContainer.children[1]);
+        });
+      });
+    }
+  }
+  
+  // Parallax effect
+  function handleParallax() {
+    const parallaxSections = document.querySelectorAll('.parallax-section');
+    
+    parallaxSections.forEach(section => {
+      const scrollPosition = window.pageYOffset;
+      const sectionTop = section.offsetTop;
+      const sectionHeight = section.offsetHeight;
+      
+      if (scrollPosition > sectionTop - window.innerHeight && 
+          scrollPosition < sectionTop + sectionHeight) {
+        const parallaxBg = section.querySelector('.parallax-bg');
+        const speed = 0.5;
+        const yPos = (scrollPosition - sectionTop) * speed;
+        
+        parallaxBg.style.transform = `translate3d(0, ${yPos}px, 0)`;
+      }
+    });
+  }
+  
+  window.addEventListener('scroll', handleParallax);
+  window.addEventListener('load', handleParallax);
+  
+  // Initialize visualizations
+  renderTimeline();
+  createLRUDiagram();
+  createExamples();
+});
+  </script>
+</body>
+</html>
